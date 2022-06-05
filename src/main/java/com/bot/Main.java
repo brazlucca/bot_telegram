@@ -238,12 +238,12 @@ public class Main {
 		String user = "";
 
 		for (String name : names) {
-			if (name != null && !name.isBlank()) {
+			if (name != null && !name.isEmpty()) {
 				user += name + " ";
 			}
 		}
 
-		if (user.isBlank()) {
+		if (user.isEmpty()) {
 			user = idUser;
 		}
 
