@@ -1,4 +1,4 @@
-package telegram_bot;
+package com.bot;
 
 import java.util.Arrays;
 
@@ -13,14 +13,14 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import telegram_bot.apis.dto.ApiAdviceResponse;
-import telegram_bot.apis.dto.ApiTranslateResponse;
-import telegram_bot.apis.dto.ApiJokeChuckNorrisResponse;
-import telegram_bot.apis.dto.ApiWeatherResponse;
+import com.bot.dto.ApiAdviceResponse;
+import com.bot.dto.ApiJokeChuckNorrisResponse;
+import com.bot.dto.ApiTranslateResponse;
+import com.bot.dto.ApiWeatherResponse;
 
 public class APIs {
 
-	protected static ResponseEntity<ApiTranslateResponse> requestTradutorAPI(String textoParaTraduzir) {
+	protected static ResponseEntity<ApiTranslateResponse> requestTradutorAPI(String textoParaTraduzir, String token_rapid_key) {
 		String urlTemplate = UriComponentsBuilder
 				.fromHttpUrl("https://google-unlimited-multi-translate.p.rapidapi.com/api_translate_unlimited.php")
 				.toUriString();
@@ -38,7 +38,7 @@ public class APIs {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		headers.set("X-RapidAPI-Host", "google-unlimited-multi-translate.p.rapidapi.com");
-		headers.set("X-RapidAPI-Key", "c3b0f077edmshb45007e09904bb4p1bab87jsnee7d204a5dd4");
+		headers.set("X-RapidAPI-Key", token_rapid_key);
 
 		HttpEntity<?> requestEntity = new HttpEntity<>(requestBody, headers);
 
@@ -58,9 +58,9 @@ public class APIs {
 		return restTemplate.exchange(urlTemplate, HttpMethod.GET, null, ApiAdviceResponse.class);
 	}
 
-	protected static ResponseEntity<ApiWeatherResponse> requestTempoAPI() {
+	protected static ResponseEntity<ApiWeatherResponse> requestTempoAPI(String token_weather) {
 		String urlTemplate = UriComponentsBuilder.fromHttpUrl("https://api.hgbrasil.com/weather")
-				.queryParam("key", "ba402e03").queryParam("city_name", "São Paulo").toUriString();
+				.queryParam("key", token_weather).queryParam("city_name", "Sï¿½o Paulo").toUriString();
 		RestTemplate restTemplate = new RestTemplate();
 
 		return restTemplate.exchange(urlTemplate, HttpMethod.GET, null, ApiWeatherResponse.class);

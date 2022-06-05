@@ -1,4 +1,4 @@
-package telegram_bot.apis.dto;
+package com.bot.dto;
 
 import java.util.ArrayList;
 

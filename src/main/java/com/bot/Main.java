@@ -1,12 +1,17 @@
-package telegram_bot;
+package com.bot;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 
+import com.bot.dto.ApiAdviceResponse;
+import com.bot.dto.ApiJokeChuckNorrisResponse;
+import com.bot.dto.ApiTranslateResponse;
+import com.bot.dto.ApiWeatherResponse;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ChatAction;
@@ -17,14 +22,15 @@ import com.pengrad.telegrambot.response.BaseResponse;
 import com.pengrad.telegrambot.response.GetUpdatesResponse;
 import com.pengrad.telegrambot.response.SendResponse;
 
-import telegram_bot.apis.dto.ApiAdviceResponse;
-import telegram_bot.apis.dto.ApiTranslateResponse;
-import telegram_bot.apis.dto.ApiJokeChuckNorrisResponse;
-import telegram_bot.apis.dto.ApiWeatherResponse;
-
 public class Main {
+	
+	private static Map<String, String> env = System.getenv();
 
-	private static TelegramBot bot = new TelegramBot("5348146011:AAGRPlc3XVarDuolyTWaz4hbFJ4ixvmzT2g");
+	private static TelegramBot bot = new TelegramBot(env.get("token_telegram"));
+	
+	private static String token_rapid_key = env.get("token_rapid_key");
+	
+	private static String token_weather = env.get("token_weather"); 
 
 	// Objeto responsavel por receber as mensagens.
 	private static GetUpdatesResponse updatesResponse;
@@ -36,18 +42,20 @@ public class Main {
 	private static BaseResponse baseResponse;
 
 	private static String tab = "     ";
-
+	
+	
 	private static String funcionalidades = new StringBuilder()
 								.append(tab).append("/tempo \n")
 								.append(tab).append("/conselho \n")
 								.append(tab).append("/piada_Chuck_Norris \n")
-								.append(tab).append("/ordenar \"Passe os números que você deseja ordenar \" \n")
+								.append(tab).append("/ordenar \"Passe os nÃºmeros que vocÃª deseja ordenar \" \n")
 								.toString();
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
+		
 		// Criacao do objeto bot com as informacoes de acesso.
 
 		// Controle de off-set, isto e, a partir deste ID sera lido as mensagens
@@ -83,38 +91,32 @@ public class Main {
 						telegramRespostaPadrao(update);
 						
 					} else if (update.message().text().toLowerCase().equals("/tempo")) {
-						ResponseEntity<ApiWeatherResponse> requestTempoAPI = APIs.requestTempoAPI();
+						ResponseEntity<ApiWeatherResponse> requestTempoAPI = APIs.requestTempoAPI(token_weather);
 						telegramRespostaTempo(update, requestTempoAPI);
 					
 					} else if (update.message().text().toLowerCase().equals("/conselho")) {
 						ResponseEntity<ApiAdviceResponse> requestConselhoAPI = APIs.requestConselhoAPI();
 						String telegramRespostaConselho = telegramRespostaConselho(update, requestConselhoAPI);
-						ResponseEntity<ApiTranslateResponse> requestTradutorAPI = APIs.requestTradutorAPI(telegramRespostaConselho);
+						ResponseEntity<ApiTranslateResponse> requestTradutorAPI = APIs.requestTradutorAPI(telegramRespostaConselho, token_rapid_key);
 						telegramRespostaConselhoTradutor(update, requestTradutorAPI);
 						
 					} else if (update.message().text().toLowerCase().equals("/piada_Chuck_Norris".toLowerCase())) {
 						ResponseEntity<ApiJokeChuckNorrisResponse> requestJokeChuckNorrisAPI = APIs.requestJokeChuckNorrisAPI();
 						String telegramRespostaPiadaChuckNorris = telegramRespostaPiadaChuckNorris(update, requestJokeChuckNorrisAPI);
-						ResponseEntity<ApiTranslateResponse> requestTradutorAPI = APIs.requestTradutorAPI(telegramRespostaPiadaChuckNorris);
+						ResponseEntity<ApiTranslateResponse> requestTradutorAPI = APIs.requestTradutorAPI(telegramRespostaPiadaChuckNorris, token_rapid_key);
 						telegramRespostaPiadaChuckNorrisTradutor(update, requestTradutorAPI);
 
 					} else if (update.message().text().toLowerCase().startsWith("/ordenar")) {
 						try {
-							String usuarioString = update.message().text().toLowerCase();
-							usuarioString = usuarioString.replace("/ordenar", " ");
-							usuarioString = usuarioString.trim();	
-							List<String> listaStringParaOrdenar = Arrays.asList(usuarioString.split(" "));
-							List<Integer> listaIntegerParaOrdenar = listaStringParaOrdenar.stream().map(Integer::parseInt).collect(Collectors.toList());
-							Collections.sort(listaIntegerParaOrdenar);
-							sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Sua lista ordenada é " + listaIntegerParaOrdenar));
+							telegramRespostaOrdenar(update);
 						} catch (Exception e) {
 							System.out.println(e);
-							sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Desculpe talvez minha funcionalidade de ordenação não esteja funcionando, certifique-se de que você tenha passado na frente do comando /ordenar apenas números com um espaço em branco entre cada número. Depois tente novamente se quiser. "));
+							sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Desculpe talvez minha funcionalidade de ordenaÃ§Ã£o nï¿½o esteja funcionando, certifique-se de que vocÃª tenha passado na frente do comando /ordenar apenas nÃºmeros com um espaÃ§o em branco entre cada nÃºmero. Depois tente novamente se quiser. "));
 						}
 						
 						
 					} else {
-						sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Desculpe eu não entendi, pode dizer novamente? "));
+						sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Desculpe eu nÃ£o entendi, pode dizer novamente? "));
 						
 					}
 					
@@ -131,48 +133,61 @@ public class Main {
 	}
 
 
+	private static void telegramRespostaOrdenar(Update update) {
+		
+		String usuarioString = update.message().text().toLowerCase();
+		usuarioString = usuarioString.replace("/ordenar", " ");
+		usuarioString = usuarioString.trim();	
+		List<String> listaStringParaOrdenar = Arrays.asList(usuarioString.split(" "));
+		List<Integer> listaIntegerParaOrdenar = listaStringParaOrdenar.stream().map(Integer::parseInt).collect(Collectors.toList());
+		Collections.sort(listaIntegerParaOrdenar);
+		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Sua lista ordenada Ã© " + listaIntegerParaOrdenar));
+		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Se quiser continuar iteragindo comigo, selecione uma das opÃ§Ãµes: \n" + funcionalidades));
+		
+	}
+
+
 	// RESPOSTA TELEGRRAM
 
 	private static void telegramRespostaPadrao(Update update) {
 		sendResponse = bot
-				.execute(new SendMessage(update.message().chat().id(), "Bem vindo usuário " + nomeDoUsuario(update) + " ao BOT"));
+				.execute(new SendMessage(update.message().chat().id(), "Bem vindo usuÃ¡rio " + nomeDoUsuario(update) + " ao BOT"));
 		sendResponse = bot
-				.execute(new SendMessage(update.message().chat().id(), "Escolha uma das opções: \n" + funcionalidades));
+				.execute(new SendMessage(update.message().chat().id(), "Escolha uma das opÃ§Ãµes: \n" + funcionalidades));
 	}
 
 	private static void telegramRespostaTempo(Update update, ResponseEntity<ApiWeatherResponse> requestTempoAPI) {
 		ApiWeatherResponse body = requestTempoAPI.getBody();
 
-		String resultado = new StringBuilder().append("Previsão do tempo em: " + body.getResults().getCity())
+		String resultado = new StringBuilder().append("PrevisÃ£o do tempo em: " + body.getResults().getCity())
 				.toString();
 
 		String resultadoHoje = new StringBuilder().append("Hoje \n")
 				.append("Data: " + body.getResults().getForecast().get(0).getDate() + "\n")
-				.append("Descrição: " + body.getResults().getDescription() + "\n")
+				.append("DescriÃ§Ã£o: " + body.getResults().getDescription() + "\n")
 				.append("Temperatura: " + body.getResults().getTemp() + " graus" + "\n")
 				.append("Velocidade do vento: " + body.getResults().getWind_speedy() + "\n")
 				.append("Por do sol: " + body.getResults().getSunset() + "\n")
-				.append("Máximo: " + body.getResults().getForecast().get(0).getMax() + " graus" + "\n")
-				.append("Mínimo: " + body.getResults().getForecast().get(0).getMin() + " graus").toString();
+				.append("MÃ¡ximo: " + body.getResults().getForecast().get(0).getMax() + " graus" + "\n")
+				.append("MÃ­nimo: " + body.getResults().getForecast().get(0).getMin() + " graus").toString();
 
-		String resultadoAmanhã = new StringBuilder().append("Amanhã \n")
+		String resultadoAmanha = new StringBuilder().append("AmanhÃ£ \n")
 				.append("Data: " + body.getResults().getForecast().get(1).getDate() + "\n")
-				.append("Descrição: " + body.getResults().getForecast().get(1).getDescription() + "\n")
-				.append("Máximo: " + body.getResults().getForecast().get(1).getMax() + " graus" + "\n")
-				.append("Mínimo: " + body.getResults().getForecast().get(1).getMin() + " graus").toString();
+				.append("DescriÃ§Ã£o: " + body.getResults().getForecast().get(1).getDescription() + "\n")
+				.append("MÃ¡ximo: " + body.getResults().getForecast().get(1).getMax() + " graus" + "\n")
+				.append("MÃ­nimo: " + body.getResults().getForecast().get(1).getMin() + " graus").toString();
 
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultado));
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultadoHoje));
-		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultadoAmanhã));
-		sendResponse = bot.execute(new SendMessage(update.message().chat().id(),
-				"Se quiser continuar iteragindo comigo, selecione uma das opções: \n" + funcionalidades));
+		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultadoAmanha));
+		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Se quiser continuar iteragindo comigo, selecione uma das opÃ§Ãµes: \n" + funcionalidades));
 
 	}
 
 	private static String telegramRespostaConselho(Update update, ResponseEntity<ApiAdviceResponse> requestConselhoAPI) {
 		ApiAdviceResponse body = requestConselhoAPI.getBody();
 
-		String resultado = new StringBuilder().append("Conselho do dia em inglês: " + body.getSlip().getAdvice())
+		String resultado = new StringBuilder().append("Conselho do dia em inglÃªs: " + body.getSlip().getAdvice())
 				.toString();
 
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultado));
@@ -188,15 +203,14 @@ public class Main {
 				.toString();
 
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultado));
-		sendResponse = bot.execute(new SendMessage(update.message().chat().id(),
-				"Se quiser continuar iteragindo comigo, selecione uma das opções: \n " + funcionalidades));
+		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), "Se quiser continuar iteragindo comigo, selecione uma das opÃ§Ãµes: \n" + funcionalidades));
 
 	}
 	
 	private static String telegramRespostaPiadaChuckNorris(Update update, ResponseEntity<ApiJokeChuckNorrisResponse> requestJokeChuckNorrisAPI) {
 		ApiJokeChuckNorrisResponse body = requestJokeChuckNorrisAPI.getBody();
 
-		String resultado = new StringBuilder().append("Piada do Chuck Norris em inglês: " + body.getValue())
+		String resultado = new StringBuilder().append("Piada do Chuck Norris em inglÃªs: " + body.getValue())
 				.toString();
 
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultado));
@@ -214,7 +228,7 @@ public class Main {
 
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(), resultado));
 		sendResponse = bot.execute(new SendMessage(update.message().chat().id(),
-				"Se quiser continuar iteragindo comigo, selecione uma das opções: \n " + funcionalidades));
+				"Se quiser continuar iteragindo comigo, selecione uma das opÃ§Ãµes: \n" + funcionalidades));
 		
 	}
 
@@ -240,5 +254,4 @@ public class Main {
 		return concatenaNomeDoUsuario(update.message().from().id().toString(), update.message().from().firstName(),
 				update.message().from().lastName());
 	}
-
 }
